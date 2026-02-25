@@ -11,7 +11,7 @@ export interface UpdateUserDto {
   favorites?: string[];
 }
 
-// Схема валидации для обновления пользователя
+
 import { z } from 'zod';
 
 export const updateUserSchema = z.object({

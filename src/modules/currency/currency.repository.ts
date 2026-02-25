@@ -1,8 +1,8 @@
 import { supabase } from '../../config/database';
-import { CachedRates } from './currency.types';
+
 
 export class CurrencyRepository {
-  // Сохраняем курсы в кэш БД на 24 часа
+  
   async saveRatesToCache(base: string, targets: string[], rates: Record<string, number>): Promise<void> {
     const cacheKey = this.generateCacheKey(base, targets);
     const now = new Date().toISOString();
@@ -22,7 +22,7 @@ export class CurrencyRepository {
     if (error) throw error;
   }
 
-  // Получаем курсы из кэша, если они не старше 24 часов
+  
   async getRatesFromCache(base: string, targets: string[]): Promise<Record<string, number> | null> {
     const cacheKey = this.generateCacheKey(base, targets);
     const oneDayAgo = new Date();
@@ -43,7 +43,7 @@ export class CurrencyRepository {
   }
 
   private generateCacheKey(base: string, targets: string[]): string {
-    // Сортируем targets, чтобы ключ был одинаковым независимо от порядка
+    
     const sortedTargets = [...targets].sort().join('_');
     return `rates_${base}_${sortedTargets}`;
   }

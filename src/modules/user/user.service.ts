@@ -4,10 +4,10 @@ import { ZodError } from 'zod';
 
 export class UserService {
   async findOrCreate(userId: string): Promise<User> {
-    // Пытаемся найти пользователя
+   
     let user = await userRepository.findByUserId(userId);
     
-    // Если не нашли - создаем с валютой по умолчанию
+    
     if (!user) {
       user = await userRepository.create(userId, 'USD');
     }
@@ -25,10 +25,10 @@ export class UserService {
 
   async updateUser(userId: string, updates: UpdateUserDto): Promise<User> {
     try {
-      // Валидируем входные данные
+      
       const validated = updateUserSchema.parse(updates);
       
-      // Обновляем пользователя
+      
       const updated = await userRepository.update(userId, validated);
       return updated;
     } catch (error) {

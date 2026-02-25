@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.currencyRepository = exports.CurrencyRepository = void 0;
 const database_1 = require("../../config/database");
 class CurrencyRepository {
-    // Сохраняем курсы в кэш БД на 24 часа
+    
     async saveRatesToCache(base, targets, rates) {
         const cacheKey = this.generateCacheKey(base, targets);
         const now = new Date().toISOString();
@@ -21,7 +21,7 @@ class CurrencyRepository {
         if (error)
             throw error;
     }
-    // Получаем курсы из кэша, если они не старше 24 часов
+    
     async getRatesFromCache(base, targets) {
         const cacheKey = this.generateCacheKey(base, targets);
         const oneDayAgo = new Date();
@@ -38,7 +38,7 @@ class CurrencyRepository {
         return data.rates;
     }
     generateCacheKey(base, targets) {
-        // Сортируем targets, чтобы ключ был одинаковым независимо от порядка
+        
         const sortedTargets = [...targets].sort().join('_');
         return `rates_${base}_${sortedTargets}`;
     }

@@ -10,7 +10,7 @@ export class UserRepository {
       .single();
 
     if (error) {
-      if (error.code === 'PGRST116') { // Не найдено
+      if (error.code === 'PGRST116') { 
         return null;
       }
       throw error;

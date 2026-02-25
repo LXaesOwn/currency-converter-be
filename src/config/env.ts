@@ -1,10 +1,9 @@
 import dotenv from 'dotenv';
 import { z } from 'zod';
 
-// Загружаем переменные окружения из .env файла
 dotenv.config();
 
-// Схема валидации переменных окружения
+
 const envSchema = z.object({
   PORT: z.string().default('3000'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
@@ -14,7 +13,7 @@ const envSchema = z.object({
   EXCHANGE_RATE_API_KEY: z.string().optional(),
 });
 
-// Парсим и валидируем
+
 const env = envSchema.safeParse(process.env);
 
 if (!env.success) {

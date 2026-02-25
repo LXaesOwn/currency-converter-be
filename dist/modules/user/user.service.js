@@ -6,9 +6,9 @@ const user_types_1 = require("./user.types");
 const zod_1 = require("zod");
 class UserService {
     async findOrCreate(userId) {
-        // Пытаемся найти пользователя
+        
         let user = await user_repository_1.userRepository.findByUserId(userId);
-        // Если не нашли - создаем с валютой по умолчанию
+        
         if (!user) {
             user = await user_repository_1.userRepository.create(userId, 'USD');
         }

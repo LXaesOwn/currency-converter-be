@@ -13,15 +13,15 @@ const user_routes_1 = __importDefault(require("./modules/user/user.routes"));
 const currency_routes_1 = __importDefault(require("./modules/currency/currency.routes"));
 const env_1 = require("./config/env");
 const app = (0, express_1.default)();
-// Middleware
+
 app.use((0, cors_1.default)({
     origin: true,
-    credentials: true, // Важно для кук
+    credentials: true, 
 }));
 app.use(express_1.default.json());
-app.use((0, cookie_parser_1.default)()); // Для парсинга кук
-app.use(auth_middleware_1.authMiddleware); // Наш middleware для user_id
-// Swagger configuration
+app.use((0, cookie_parser_1.default)()); 
+app.use(auth_middleware_1.authMiddleware); 
+
 const swaggerOptions = {
     definition: {
         openapi: '3.0.0',
@@ -37,18 +37,18 @@ const swaggerOptions = {
             },
         ],
     },
-    apis: ['./src/modules/**/*.controller.ts'], // Где искать JSDoc комментарии
+    apis: ['./src/modules/**/*.controller.ts'], 
 };
 const swaggerSpec = (0, swagger_jsdoc_1.default)(swaggerOptions);
 app.use('/api-docs', swagger_ui_express_1.default.serve, swagger_ui_express_1.default.setup(swaggerSpec));
-// Routes
+
 app.use('/api/user', user_routes_1.default);
 app.use('/api', currency_routes_1.default);
-// Health check
+
 app.get('/health', (_req, res) => {
     res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
-// Error handling middleware
+
 app.use((err, _req, res, _next) => {
     console.error('Error:', err.message);
     if (err.message.includes('Validation')) {

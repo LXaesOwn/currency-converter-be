@@ -25,7 +25,7 @@ export class ApiClient {
     try {
       console.log(`Calling API for ${base} to ${targets.join(',')}`);
       
-      // Для Frankfurter API
+     
       const response = await this.client.get('/', {
         params: {
           from: base,
@@ -61,7 +61,7 @@ export class ApiClient {
     } catch (error) {
       console.error('Currencies API Error:', error);
       
-      // Возвращаем базовый список если API недоступен
+      
       return ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'CNY', 'RUB'];
     }
   }

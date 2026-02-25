@@ -13,14 +13,13 @@ export interface CachedRates {
   updated_at: string;
 }
 
-// Схема валидации для запроса rates
+
 export const ratesQuerySchema = z.object({
   base: z.string().length(3).optional(),
   targets: z.string().transform((str) => {
-    // Разделяем по запятой и удаляем пробелы
+    
     return str.split(',').map(s => s.trim().toUpperCase());
   }),
 });
 
-// Схема для проверки кодов валют
 export const currencyCodeSchema = z.string().length(3).regex(/^[A-Z]{3}$/);

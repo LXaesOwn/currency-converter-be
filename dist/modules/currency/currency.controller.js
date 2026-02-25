@@ -75,22 +75,27 @@ class CurrencyController {
                 return res.status(401).json({ error: 'Unauthorized' });
             }
             const { base, targets } = req.query;
-            // Парсим targets из строки "EUR,GBP" в массив
-            const targetsArray = typeof targets === 'string'
-                ? targets.split(',').map(t => t.trim().toUpperCase())
-                : [];
-            if (targetsArray.length === 0) {
+            
+            if (!targets) {
                 return res.status(400).json({ error: 'Targets parameter is required' });
             }
-            // Получаем пользователя, чтобы узнать его базовую валюту
+            
+            const targetsString = targets;
+            const targetsArray = targetsString.split(',').map(t => t.trim().toUpperCase());
+            console.log('Processing rates request:', { base, targetsArray });
+            if (targetsArray.length === 0) {
+                return res.status(400).json({ error: 'At least one target currency is required' });
+            }
+            
             const user = await user_service_1.userService.getUser(userId);
-            const rates = await currency_service_1.currencyService.getRates(userId, typeof base === 'string' ? base.toUpperCase() : '', targetsArray, user.base_currency);
+            const rates = await currency_service_1.currencyService.getRates(userId, base || '', targetsArray, user.base_currency);
             res.json({
-                base: (typeof base === 'string' ? base.toUpperCase() : user.base_currency),
+                base: base?.toUpperCase() || user.base_currency,
                 rates,
             });
         }
         catch (error) {
+            console.error('Controller error:', error);
             next(error);
         }
     }

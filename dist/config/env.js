@@ -6,8 +6,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.config = void 0;
 const dotenv_1 = __importDefault(require("dotenv"));
 const zod_1 = require("zod");
+
 dotenv_1.default.config();
-// Схема валидации переменных окружения
+
 const envSchema = zod_1.z.object({
     PORT: zod_1.z.string().default('3000'),
     NODE_ENV: zod_1.z.enum(['development', 'production', 'test']).default('development'),
@@ -16,7 +17,7 @@ const envSchema = zod_1.z.object({
     EXCHANGE_RATE_API_URL: zod_1.z.string().url(),
     EXCHANGE_RATE_API_KEY: zod_1.z.string().optional(),
 });
-// Парсим и валидируем
+
 const env = envSchema.safeParse(process.env);
 if (!env.success) {
     console.error('❌ Invalid environment variables:', env.error.format());

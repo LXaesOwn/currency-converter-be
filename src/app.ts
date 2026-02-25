@@ -11,16 +11,26 @@ import { config } from './config/env';
 
 const app = express();
 
-// Middleware
-app.use(cors({
-  origin: true,
-  credentials: true, // Важно для кук
-}));
-app.use(express.json());
-app.use(cookieParser()); // Для парсинга кук
-app.use(authMiddleware); // Наш middleware для user_id
 
-// Swagger configuration
+const corsOptions = {
+  origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
+  credentials: true,
+  optionsSuccessStatus: 200,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
+};
+
+
+app.use(cors(corsOptions));
+
+
+app.options('*', cors(corsOptions));
+
+app.use(express.json());
+app.use(cookieParser());
+app.use(authMiddleware);
+
+
 const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
@@ -35,23 +45,32 @@ const swaggerOptions = {
         description: 'Development server',
       },
     ],
+    components: {
+      securitySchemes: {
+        cookieAuth: {
+          type: 'apiKey',
+          in: 'cookie',
+          name: 'user_id',
+        },
+      },
+    },
   },
-  apis: ['./src/modules/**/*.controller.ts'], // Где искать JSDoc комментарии
+  apis: ['./src/modules/**/*.controller.ts'],
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// Routes
+
 app.use('/api/user', userRoutes);
 app.use('/api', currencyRoutes);
 
-// Health check
+
 app.get('/health', (_req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// Error handling middleware
+
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('Error:', err.message);
   

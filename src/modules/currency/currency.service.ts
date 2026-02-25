@@ -4,16 +4,16 @@ import { UserRequestCache } from '../../utils/cache.utils';
 
 
 export class CurrencyService {
-  // Список поддерживаемых валют (кэшируется в памяти на 1 час)
+  
   private supportedCurrenciesCache: { data: string[] | null; timestamp: number } = {
     data: null,
     timestamp: 0,
   };
-  private readonly CACHE_TTL = 60 * 60 * 1000; // 1 час в миллисекундах
+  private readonly CACHE_TTL = 60 * 60 * 1000; 
 
   async getSupportedCurrencies(userId: string): Promise<string[]> {
     try {
-      // Проверяем кэш в памяти (для всех пользователей)
+      
       if (
         this.supportedCurrenciesCache.data &&
         Date.now() - this.supportedCurrenciesCache.timestamp < this.CACHE_TTL
@@ -22,7 +22,7 @@ export class CurrencyService {
         return this.supportedCurrenciesCache.data;
       }
 
-      // Проверяем in-memory кэш для этого пользователя (5 минут)
+      
       const cacheKey = UserRequestCache.getKey(userId, '/api/currencies');
       const cached = UserRequestCache.get(userId, cacheKey);
       if (cached) {
@@ -31,21 +31,21 @@ export class CurrencyService {
       }
 
       console.log('Fetching currencies from API');
-      // Получаем из внешнего API
+      
       const currencies = await apiClient.getSupportedCurrencies();
       
-      // Сохраняем в общий кэш
+      
       this.supportedCurrenciesCache.data = currencies;
       this.supportedCurrenciesCache.timestamp = Date.now();
       
-      // Сохраняем в пользовательский кэш
+     
       UserRequestCache.set(userId, cacheKey, currencies, 300);
       
       return currencies;
     } catch (error) {
       console.error('Error in getSupportedCurrencies:', error);
       if (error instanceof ExternalApiError) {
-        // Возвращаем базовый список если API недоступен
+        
         return ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'CNY'];
       }
       throw error;
@@ -61,44 +61,44 @@ export class CurrencyService {
     try {
       console.log('getRates called with:', { userId, base, targets, userBaseCurrency });
 
-      // Валидируем входные параметры
+      
       if (!targets || targets.length === 0) {
         throw new Error('Targets array is required');
       }
 
-      // Валидируем каждый код валюты
+      
       targets.forEach(code => {
         if (!code || code.length !== 3 || !/^[A-Z]{3}$/.test(code)) {
           throw new Error(`Invalid currency code: ${code}`);
         }
       });
 
-      // Определяем базовую валюту: из параметра или из настроек пользователя
+      
       const effectiveBase = (base || userBaseCurrency || 'USD').toUpperCase();
       console.log('Effective base currency:', effectiveBase);
 
-      // Генерируем ключ для кэша
+      
       const requestKey = `/api/rates?base=${effectiveBase}&targets=${targets.join(',')}`;
       const cacheKey = UserRequestCache.getKey(userId, requestKey);
       
-      // Проверяем in-memory кэш (5 минут)
+      
       const cachedResponse = UserRequestCache.get(userId, cacheKey);
       if (cachedResponse) {
         console.log('Returning rates from memory cache');
         return cachedResponse;
       }
 
-      // Проверяем кэш в БД (24 часа)
+      
       console.log('Checking database cache');
       const dbCached = await currencyRepository.getRatesFromCache(effectiveBase, targets);
       if (dbCached) {
         console.log('Returning rates from database cache');
-        // Сохраняем в in-memory кэш
+        
         UserRequestCache.set(userId, cacheKey, dbCached, 300);
         return dbCached;
       }
 
-      // Если ничего нет - идем во внешнее API
+      
       console.log('Fetching rates from external API');
       let rates: Record<string, number>;
       
@@ -106,7 +106,7 @@ export class CurrencyService {
         rates = await apiClient.getRates(effectiveBase, targets);
       } catch (apiError) {
         console.error('External API error, using mock data:', apiError);
-        // Возвращаем тестовые данные для демонстрации
+        
         rates = {};
         targets.forEach(target => {
           if (target === 'USD') rates[target] = 1.0;
@@ -121,12 +121,12 @@ export class CurrencyService {
         });
       }
       
-      // Сохраняем в оба кэша
+      
       try {
         await currencyRepository.saveRatesToCache(effectiveBase, targets, rates);
       } catch (dbError) {
         console.error('Failed to save to database cache:', dbError);
-        // Продолжаем даже если не удалось сохранить в БД
+        
       }
       
       UserRequestCache.set(userId, cacheKey, rates, 300);

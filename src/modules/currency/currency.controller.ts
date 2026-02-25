@@ -77,12 +77,12 @@ export class CurrencyController {
 
     const { base, targets } = req.query;
     
-    // Проверяем наличие targets
+    
     if (!targets) {
       return res.status(400).json({ error: 'Targets parameter is required' });
     }
 
-    // Парсим targets из строки "EUR,GBP" в массив
+    
     const targetsString = targets as string;
     const targetsArray = targetsString.split(',').map(t => t.trim().toUpperCase());
     
@@ -92,7 +92,7 @@ export class CurrencyController {
       return res.status(400).json({ error: 'At least one target currency is required' });
     }
 
-    // Получаем пользователя
+   
     const user = await userService.getUser(userId);
     
     const rates = await currencyService.getRates(

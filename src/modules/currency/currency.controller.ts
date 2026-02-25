@@ -69,41 +69,48 @@ export class CurrencyController {
    *                     type: number
    */
   async getRates(req: Request, res: Response, next: NextFunction) {
-    try {
-      const userId = req.userId;
-      if (!userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
-      }
-
-      const { base, targets } = req.query;
-      
-      // Парсим targets из строки "EUR,GBP" в массив
-      const targetsArray = typeof targets === 'string' 
-        ? targets.split(',').map(t => t.trim().toUpperCase())
-        : [];
-
-      if (targetsArray.length === 0) {
-        return res.status(400).json({ error: 'Targets parameter is required' });
-      }
-
-      // Получаем пользователя, чтобы узнать его базовую валюту
-      const user = await userService.getUser(userId);
-      
-      const rates = await currencyService.getRates(
-        userId,
-        typeof base === 'string' ? base.toUpperCase() : '',
-        targetsArray,
-        user.base_currency
-      );
-
-      res.json({
-        base: (typeof base === 'string' ? base.toUpperCase() : user.base_currency),
-        rates,
-      });
-    } catch (error) {
-      next(error);
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
     }
+
+    const { base, targets } = req.query;
+    
+    // Проверяем наличие targets
+    if (!targets) {
+      return res.status(400).json({ error: 'Targets parameter is required' });
+    }
+
+    // Парсим targets из строки "EUR,GBP" в массив
+    const targetsString = targets as string;
+    const targetsArray = targetsString.split(',').map(t => t.trim().toUpperCase());
+    
+    console.log('Processing rates request:', { base, targetsArray });
+
+    if (targetsArray.length === 0) {
+      return res.status(400).json({ error: 'At least one target currency is required' });
+    }
+
+    // Получаем пользователя
+    const user = await userService.getUser(userId);
+    
+    const rates = await currencyService.getRates(
+      userId,
+      base as string || '',
+      targetsArray,
+      user.base_currency
+    );
+
+    res.json({
+      base: (base as string)?.toUpperCase() || user.base_currency,
+      rates,
+    });
+  } catch (error) {
+    console.error('Controller error:', error);
+    next(error);
   }
+}
 }
 
 export const currencyController = new CurrencyController();

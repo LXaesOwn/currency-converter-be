@@ -1,11 +1,13 @@
-import axios, { AxiosInstance, AxiosError } from 'axios';
+import axios, { AxiosInstance } from 'axios';
 import { config } from '../config/env';
 
-// Кастомные ошибки для API
 export class ExternalApiError extends Error {
-  constructor(message: string, public statusCode?: number) {
+  public statusCode?: number;
+
+  constructor(message: string, statusCode?: number) {
     super(message);
     this.name = 'ExternalApiError';
+    this.statusCode = statusCode;
   }
 }
 
@@ -15,70 +17,52 @@ export class ApiClient {
   constructor() {
     this.client = axios.create({
       baseURL: config.exchangeApi.url,
-      timeout: 10000, // 10 секунд таймаут
+      timeout: 10000,
     });
-
-    // Добавляем интерцептор для обработки ошибок
-    this.client.interceptors.response.use(
-      (response) => response,
-      (error: AxiosError) => {
-        if (error.code === 'ECONNABORTED') {
-          throw new ExternalApiError('External API timeout');
-        }
-        if (error.response) {
-          throw new ExternalApiError(
-            `External API error: ${error.response.status}`,
-            error.response.status
-          );
-        }
-        if (error.request) {
-          throw new ExternalApiError('No response from external API');
-        }
-        throw new ExternalApiError(error.message);
-      }
-    );
   }
 
   async getRates(base: string, targets: string[]): Promise<Record<string, number>> {
     try {
-      const symbols = targets.join(',');
+      console.log(`Calling API for ${base} to ${targets.join(',')}`);
+      
+      // Для Frankfurter API
       const response = await this.client.get('/', {
         params: {
-          base,
-          symbols,
-          ...(config.exchangeApi.key && { access_key: config.exchangeApi.key }),
+          from: base,
+          to: targets.join(','),
         },
       });
-
-      // Проверяем структуру ответа
-      if (!response.data || !response.data.rates) {
-        throw new ExternalApiError('Invalid API response structure');
+      
+      console.log('API response:', response.data);
+      
+      if (response.data && response.data.rates) {
+        return response.data.rates;
       }
-
-      return response.data.rates;
+      
+      throw new ExternalApiError('Invalid API response format');
     } catch (error) {
-      if (error instanceof ExternalApiError) {
-        throw error;
+      console.error('API Error details:', error);
+      
+      if (axios.isAxiosError(error)) {
+        throw new ExternalApiError(
+          `Currency API error: ${error.message}`,
+          error.response?.status
+        );
       }
-      throw new ExternalApiError('Unexpected error calling external API');
+      
+      throw new ExternalApiError('Currency API temporarily unavailable');
     }
   }
 
   async getSupportedCurrencies(): Promise<string[]> {
     try {
-      const response = await this.client.get('/');
-      
-      if (!response.data || !response.data.rates) {
-        throw new ExternalApiError('Invalid API response structure');
-      }
-
-      // Получаем все доступные валюты из объекта rates
-      return Object.keys(response.data.rates);
+      const response = await axios.get('https://api.frankfurter.app/currencies');
+      return Object.keys(response.data);
     } catch (error) {
-      if (error instanceof ExternalApiError) {
-        throw error;
-      }
-      throw new ExternalApiError('Unexpected error calling external API');
+      console.error('Currencies API Error:', error);
+      
+      // Возвращаем базовый список если API недоступен
+      return ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'CNY', 'RUB'];
     }
   }
 }

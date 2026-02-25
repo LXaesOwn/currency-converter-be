@@ -44,5 +44,5 @@ Cookie в браузере - httpOnly cookie
 
 Использовалось:
 Frankfurter API - бесплатные курсы валют
-Supabase - отличная PostgreSQL БД
+Supabase - PostgreSQL БД
 Swagger - документация API

@@ -1,57 +1,68 @@
 import { supabase } from '../../config/database';
-import { User, UpdateUserDto } from './user.types';
+import { User } from './user.types';
 
 export class UserRepository {
-  async findByUserId(userId: string): Promise<User | null> {
+  async findById(userId: string): Promise<User | null> {
+    console.log(` Repository: Finding user by ID: ${userId}`);
+    
     const { data, error } = await supabase
       .from('users')
       .select('*')
       .eq('user_id', userId)
       .single();
 
+    // PGRST116 means no rows found - this is expected when user doesn't exist
     if (error) {
-      if (error.code === 'PGRST116') { 
-        return null;
+      if (error.code === 'PGRST116') {
+        console.log(`ℹ️ User not found in DB: ${userId}`);
+        return null; 
       }
+      console.error(`❌ Repository error:`, error);
       throw error;
     }
 
-    return data as User;
+    console.log(` Repository: User found: ${userId}`);
+    return data;
   }
 
-  async create(userId: string, baseCurrency: string): Promise<User> {
-    const now = new Date().toISOString();
+  async create(userId: string): Promise<User> {
+    console.log(`🆕 Repository: Creating user: ${userId}`);
     
     const { data, error } = await supabase
       .from('users')
-      .insert({
+      .insert({ 
         user_id: userId,
-        base_currency: baseCurrency,
-        favorites: [],
-        created_at: now,
-        updated_at: now,
+        base_currency: 'USD',
+        favorites: [] 
       })
       .select()
       .single();
 
-    if (error) throw error;
-    return data as User;
+    if (error) {
+      console.error(` Repository create error:`, error);
+      throw error;
+    }
+
+    console.log(` Repository: User created: ${userId}`);
+    return data;
   }
 
-  async update(userId: string, updates: UpdateUserDto): Promise<User> {
+  async update(userId: string, updates: Partial<User>): Promise<User> {
+    console.log(` Repository: Updating user: ${userId}`);
+    
     const { data, error } = await supabase
       .from('users')
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString(),
-      })
+      .update({ ...updates, updated_at: new Date().toISOString() })
       .eq('user_id', userId)
       .select()
       .single();
 
-    if (error) throw error;
-    return data as User;
+    if (error) {
+      console.error(` Repository update error:`, error);
+      throw error;
+    }
+
+    console.log(` Repository: User updated: ${userId}`);
+    return data;
   }
 }
-
-export const userRepository = new UserRepository();

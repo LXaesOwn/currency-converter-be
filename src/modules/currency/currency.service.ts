@@ -1,145 +1,73 @@
-import { currencyRepository } from './currency.repository';
-import { apiClient, ExternalApiError } from '../../utils/api.utils';
-import { UserRequestCache } from '../../utils/cache.utils';
-
+import { apiClient } from '../../utils/api.utils';
+import { CacheUtils } from '../../utils/cache.utils';
+import { CurrencyRepository } from './currency.repository';
+import { CurrencyRateSchema, SUPPORTED_CURRENCIES } from './currency.types';
+import { 
+  CACHE_IN_MEMORY_TTL, 
+  CACHE_DB_TTL_HOURS, 
+  CACHE_KEYS 
+} from '../../config/env';
 
 export class CurrencyService {
-  
-  private supportedCurrenciesCache: { data: string[] | null; timestamp: number } = {
-    data: null,
-    timestamp: 0,
-  };
-  private readonly CACHE_TTL = 60 * 60 * 1000; 
+  constructor(private currencyRepository: CurrencyRepository) {}
 
-  async getSupportedCurrencies(userId: string): Promise<string[]> {
-    try {
-      
-      if (
-        this.supportedCurrenciesCache.data &&
-        Date.now() - this.supportedCurrenciesCache.timestamp < this.CACHE_TTL
-      ) {
-        console.log('Returning currencies from memory cache');
-        return this.supportedCurrenciesCache.data;
-      }
-
-      
-      const cacheKey = UserRequestCache.getKey(userId, '/api/currencies');
-      const cached = UserRequestCache.get(userId, cacheKey);
-      if (cached) {
-        console.log('Returning currencies from user cache');
-        return cached;
-      }
-
-      console.log('Fetching currencies from API');
-      
-      const currencies = await apiClient.getSupportedCurrencies();
-      
-      
-      this.supportedCurrenciesCache.data = currencies;
-      this.supportedCurrenciesCache.timestamp = Date.now();
-      
-     
-      UserRequestCache.set(userId, cacheKey, currencies, 300);
-      
-      return currencies;
-    } catch (error) {
-      console.error('Error in getSupportedCurrencies:', error);
-      if (error instanceof ExternalApiError) {
-        
-        return ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'CNY'];
-      }
-      throw error;
+  async getSupportedCurrencies(): Promise<string[]> {
+    const cacheKey = `${CACHE_KEYS.CURRENCIES}:static`;
+    
+    const cached = CacheUtils.get<string[]>(cacheKey);
+    if (cached) {
+      return cached;
     }
+
+    CacheUtils.set(cacheKey, SUPPORTED_CURRENCIES, 3600);
+    return [...SUPPORTED_CURRENCIES];
   }
 
   async getRates(
-    userId: string,
-    base: string,
-    targets: string[],
-    userBaseCurrency?: string
+    userId: string, 
+    base: string = 'USD', 
+    targets: string[] = []
   ): Promise<Record<string, number>> {
-    try {
-      console.log('getRates called with:', { userId, base, targets, userBaseCurrency });
-
-      
-      if (!targets || targets.length === 0) {
-        throw new Error('Targets array is required');
+    const sortedTargets = [...targets].sort();
+    const targetsKey = sortedTargets.join('_');
+    
+    const inMemoryKey = `${CACHE_KEYS.USER}:${userId}:${CACHE_KEYS.RATES}:${base}:${targetsKey}`;
+    const dbCacheKey = `${CACHE_KEYS.RATES}:${base}:${targetsKey}`;
+    const inMemoryRates = CacheUtils.get<Record<string, number>>(inMemoryKey);
+    if (inMemoryRates) {
+      return inMemoryRates;
+    }
+    const dbRates = await this.currencyRepository.findRatesByKey(dbCacheKey);
+    
+    if (dbRates) {
+      const dbAge = (Date.now() - new Date(dbRates.updated_at).getTime()) / 1000 / 3600;
+      if (dbAge < CACHE_DB_TTL_HOURS) {
+        CacheUtils.set(inMemoryKey, dbRates.rates, CACHE_IN_MEMORY_TTL);
+        return dbRates.rates;
       }
-
-      
-      targets.forEach(code => {
-        if (!code || code.length !== 3 || !/^[A-Z]{3}$/.test(code)) {
-          throw new Error(`Invalid currency code: ${code}`);
+    }
+    try {
+      const response = await apiClient.get('/latest', {
+        params: {
+          base,
+          symbols: sortedTargets.join(',')
         }
       });
 
-      
-      const effectiveBase = (base || userBaseCurrency || 'USD').toUpperCase();
-      console.log('Effective base currency:', effectiveBase);
+      const validatedRates = CurrencyRateSchema.parse(response.data);
 
-      
-      const requestKey = `/api/rates?base=${effectiveBase}&targets=${targets.join(',')}`;
-      const cacheKey = UserRequestCache.getKey(userId, requestKey);
-      
-      
-      const cachedResponse = UserRequestCache.get(userId, cacheKey);
-      if (cachedResponse) {
-        console.log('Returning rates from memory cache');
-        return cachedResponse;
-      }
+      await this.currencyRepository.upsertRates(
+        dbCacheKey,
+        base,
+        validatedRates.rates
+      );
 
-      
-      console.log('Checking database cache');
-      const dbCached = await currencyRepository.getRatesFromCache(effectiveBase, targets);
-      if (dbCached) {
-        console.log('Returning rates from database cache');
-        
-        UserRequestCache.set(userId, cacheKey, dbCached, 300);
-        return dbCached;
-      }
+      CacheUtils.set(inMemoryKey, validatedRates.rates, CACHE_IN_MEMORY_TTL);
 
-      
-      console.log('Fetching rates from external API');
-      let rates: Record<string, number>;
-      
-      try {
-        rates = await apiClient.getRates(effectiveBase, targets);
-      } catch (apiError) {
-        console.error('External API error, using mock data:', apiError);
-        
-        rates = {};
-        targets.forEach(target => {
-          if (target === 'USD') rates[target] = 1.0;
-          else if (target === 'EUR') rates[target] = 0.92;
-          else if (target === 'GBP') rates[target] = 0.78;
-          else if (target === 'JPY') rates[target] = 150.45;
-          else if (target === 'CHF') rates[target] = 0.89;
-          else if (target === 'CAD') rates[target] = 1.35;
-          else if (target === 'AUD') rates[target] = 1.52;
-          else if (target === 'CNY') rates[target] = 7.18;
-          else rates[target] = 1.0;
-        });
-      }
-      
-      
-      try {
-        await currencyRepository.saveRatesToCache(effectiveBase, targets, rates);
-      } catch (dbError) {
-        console.error('Failed to save to database cache:', dbError);
-        
-      }
-      
-      UserRequestCache.set(userId, cacheKey, rates, 300);
-      
-      return rates;
+      return validatedRates.rates;
     } catch (error) {
-      console.error('Error in getRates:', error);
-      if (error instanceof Error) {
-        throw new Error(`Failed to get rates: ${error.message}`);
-      }
-      throw new Error('Failed to get rates');
+      throw new Error('Exchange rate API is unavailable. Please try again later.');
     }
   }
 }
-
-export const currencyService = new CurrencyService();
+export const currencyService = new CurrencyService(new CurrencyRepository());

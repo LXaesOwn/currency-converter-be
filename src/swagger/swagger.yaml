@@ -1,0 +1,144 @@
+openapi: 3.0.0
+info:
+  title: Currency Converter API
+  description: API for currency conversion with user preferences and caching
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000/api
+    description: Local server
+
+tags:
+  - name: Currencies
+    description: Currency operations
+  - name: Rates
+    description: Exchange rate operations
+  - name: User
+    description: User preferences management
+
+paths:
+  /currencies:
+    get:
+      summary: Get supported currencies
+      tags: [Currencies]
+      responses:
+        '200':
+          description: List of supported currency codes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  example: USD
+
+  /rates:
+    get:
+      summary: Get exchange rates
+      description: Returns exchange rates for specified currencies
+      tags: [Rates]
+      parameters:
+        - name: base
+          in: query
+          required: false
+          schema:
+            type: string
+            default: USD
+          description: Base currency (defaults to user's preference)
+        - name: targets
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of target currencies (e.g., EUR,GBP)
+      responses:
+        '200':
+          description: Exchange rates
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  base:
+                    type: string
+                    example: USD
+                  rates:
+                    type: object
+                    additionalProperties:
+                      type: number
+                    example:
+                      EUR: 0.92
+                      GBP: 0.78
+
+  /user:
+    get:
+      summary: Get current user preferences
+      description: Returns the current user's base currency and favorites
+      tags: [User]
+      responses:
+        '200':
+          description: User data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id:
+                    type: string
+                    format: uuid
+                  base_currency:
+                    type: string
+                    example: USD
+                  favorites:
+                    type: array
+                    items:
+                      type: string
+                    example: ["EUR", "GBP"]
+                  created_at:
+                    type: string
+                    format: date-time
+                  updated_at:
+                    type: string
+                    format: date-time
+    post:
+      summary: Update user preferences
+      description: Update base currency and favorites for current user
+      tags: [User]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                baseCurrency:
+                  type: string
+                  description: New base currency
+                  example: EUR
+                favorites:
+                  type: array
+                  items:
+                    type: string
+                  description: List of favorite currencies
+                  example: ["USD", "GBP", "JPY"]
+      responses:
+        '200':
+          description: Updated user data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id:
+                    type: string
+                    format: uuid
+                  base_currency:
+                    type: string
+                    example: EUR
+                  favorites:
+                    type: array
+                    items:
+                      type: string
+                    example: ["USD", "GBP", "JPY"]
+                  updated_at:
+                    type: string
+                    format: date-time

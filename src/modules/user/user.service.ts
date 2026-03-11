@@ -1,47 +1,47 @@
-import { userRepository } from './user.repository';
-import { User, UpdateUserDto, updateUserSchema } from './user.types';
-import { ZodError } from 'zod';
+import { UserRepository } from './user.repository';
+import { UpdateUserRequest } from './user.types';
 
 export class UserService {
-  async findOrCreate(userId: string): Promise<User> {
-   
-    let user = await userRepository.findByUserId(userId);
+  constructor(private userRepository: UserRepository) {}
+
+  async findOrCreate(userId: string) {
+    console.log(`🔍 Finding or creating user: ${userId}`);
     
     
-    if (!user) {
-      user = await userRepository.create(userId, 'USD');
+    const existingUser = await this.userRepository.findById(userId);
+    if (existingUser) {
+      console.log(` User found: ${userId}`);
+      return existingUser;
     }
     
+
+    console.log(`🆕 Creating new user: ${userId}`);
+    const newUser = await this.userRepository.create(userId);
+    return newUser;
+  }
+
+  async getUserById(userId: string) {
+    console.log(`🔍 Getting user by ID: ${userId}`);
+    const user = await this.userRepository.findById(userId);
+    
+    if (!user) {
+      console.log(` User not found: ${userId}`);
+      return null; 
+    }
+    
+    console.log(` User retrieved: ${userId}`);
     return user;
   }
 
-  async getUser(userId: string): Promise<User> {
-    const user = await userRepository.findByUserId(userId);
-    if (!user) {
-      throw new Error('User not found');
-    }
-    return user;
-  }
-
-  async updateUser(userId: string, updates: UpdateUserDto): Promise<User> {
-    try {
-      
-      const validated = updateUserSchema.parse(updates);
-      
-      
-      const updated = await userRepository.update(userId, validated);
-      return updated;
-    } catch (error) {
-      if (error instanceof ZodError) {
-        throw new Error(`Validation error: ${error.message}`);
-      }
-      throw error;
-    }
-  }
-
-  async createUser(userId: string, baseCurrency: string): Promise<User> {
-    return userRepository.create(userId, baseCurrency);
+  async updateUser(userId: string, data: UpdateUserRequest) {
+    console.log(` Updating user: ${userId}`);
+    const updates: any = {};
+    if (data.baseCurrency) updates.base_currency = data.baseCurrency;
+    if (data.favorites) updates.favorites = data.favorites;
+    
+    const updatedUser = await this.userRepository.update(userId, updates);
+    console.log(` User updated: ${userId}`);
+    return updatedUser;
   }
 }
-
-export const userService = new UserService();
+export const userService = new UserService(new UserRepository());

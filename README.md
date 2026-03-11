@@ -1,48 +1,36 @@
-Кэширование:
-1 час - список валют (в памяти)
+# Currency Converter Backend
 
-5 минут - повторные запросы от одного пользователя (в памяти)
+A robust RESTful API for currency conversion with multi-level caching, user management via httpOnly cookies, and external exchange rate integration.
 
-24 часа - курсы валют для пар base-target (в БД)
+## Features
 
-Структура:
-currency-converter-be/
-├── src/
-│   ├── config/               # Конфигурация (БД, env)
-│   ├── middlewares/           # Промежуточные обработчики
-│   │   └── auth.middleware.ts # Авторизация через cookie
-│   ├── modules/               # Модули приложения
-│   │   ├── currency/          # Валюты и курсы
-│   │   └── user/              # Пользователи и настройки
-│   ├── utils/                 # Утилиты
-│   │   ├── api.utils.ts       # Работа с внешним API
-│   │   └── cache.utils.ts     # Кэширование в памяти
-│   ├── app.ts                  # Настройка Express
-│   └── server.ts               # Запуск сервера
-├── demo/                       # Скриншоты для демонстрации
-├── .env.example                 # Пример переменных окружения
-├── .eslintrc.json               # Конфигурация линтера
-├── .gitignore                   # Исключения для Git
-├── .nvmrc                       # Версия Node.js
-├── .prettierrc                  # Настройки форматирования
-├── package.json                  # Зависимости
-├── README.md                     # Документация
-└── tsconfig.json                 # Конфигурация TypeScript
+- **User Authentication**: Automatic user identification via httpOnly cookies (no login required)
+- **Multi-Level Caching**:
+  - In-memory cache (5 minutes) for repeated user requests
+  - Database cache (24 hours) for exchange rates
+  - Static list cache (1 hour) for supported currencies
+- **External API Integration**: Fetches real-time exchange rates from exchangerate.host
+- **Comprehensive Documentation**: Swagger UI available at `/api-docs`
+- **Type Safety**: Full TypeScript implementation with Zod validation
+- **Clean Architecture**: Repository pattern, service layer, and separation of concerns
 
-Скриншоты:
-Все скриншоты работы приложения находятся в папке /demo:
-Swagger документация - главная страница API
-GET /api/currencies - список всех валют
-GET /api/user - настройки пользователя (первый запрос)
-POST /api/user - обновление настроек
-GET /api/user - настройки после обновления
-GET /api/rates - курсы валют
-Повторный GET /api/rates - демонстрация кэширования
-Cookie в браузере - httpOnly cookie
-Таблицы Supabase - структура БД
+## Tech Stack
 
+| Technology | Purpose |
+|------------|---------|
+| Node.js | Runtime environment |
+| Express.js | Web framework |
+| TypeScript | Programming language |
+| Supabase | PostgreSQL database |
+| Zod | Data validation |
+| memory-cache | In-memory caching |
+| Swagger UI | API documentation |
+| Axios | HTTP client for external API |
+| ESLint + Prettier | Code quality |
 
-Использовалось:
-Frankfurter API - бесплатные курсы валют
-Supabase - отличная PostgreSQL БД
-Swagger - документация API
+## Prerequisites
+
+- Node.js 18.x or higher
+- npm or yarn package manager
+- Supabase account (free tier works perfectly)
+- Exchange rate API key (optional - exchangerate.host works without key)

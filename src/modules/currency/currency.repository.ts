@@ -1,52 +1,37 @@
 import { supabase } from '../../config/database';
 
+export interface CachedRates {
+  cache_key: string;
+  base_currency: string;
+  rates: Record<string, number>;
+  updated_at: string;
+}
 
 export class CurrencyRepository {
-  
-  async saveRatesToCache(base: string, targets: string[], rates: Record<string, number>): Promise<void> {
-    const cacheKey = this.generateCacheKey(base, targets);
-    const now = new Date().toISOString();
+  async findRatesByKey(cacheKey: string): Promise<CachedRates | null> {
+    const { data, error } = await supabase
+      .from('exchange_rates_cache')
+      .select('*')
+      .eq('cache_key', cacheKey)
+      .single();
 
+    if (error && error.code !== 'PGRST116') {
+      throw error;
+    }
+
+    return data;
+  }
+
+  async upsertRates(cacheKey: string, base: string, rates: Record<string, number>): Promise<void> {
     const { error } = await supabase
       .from('exchange_rates_cache')
       .upsert({
         cache_key: cacheKey,
         base_currency: base,
-        rates,
-        updated_at: now,
-        created_at: now,
-      }, {
-        onConflict: 'cache_key',
+        rates: rates,
+        updated_at: new Date().toISOString()
       });
 
     if (error) throw error;
   }
-
-  
-  async getRatesFromCache(base: string, targets: string[]): Promise<Record<string, number> | null> {
-    const cacheKey = this.generateCacheKey(base, targets);
-    const oneDayAgo = new Date();
-    oneDayAgo.setHours(oneDayAgo.getHours() - 24);
-
-    const { data, error } = await supabase
-      .from('exchange_rates_cache')
-      .select('rates')
-      .eq('cache_key', cacheKey)
-      .gte('updated_at', oneDayAgo.toISOString())
-      .single();
-
-    if (error || !data) {
-      return null;
-    }
-
-    return data.rates as Record<string, number>;
-  }
-
-  private generateCacheKey(base: string, targets: string[]): string {
-    
-    const sortedTargets = [...targets].sort().join('_');
-    return `rates_${base}_${sortedTargets}`;
-  }
 }
-
-export const currencyRepository = new CurrencyRepository();
